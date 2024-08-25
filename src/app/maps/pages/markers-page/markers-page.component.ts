@@ -8,6 +8,12 @@ interface MarkerAndColor {
 }
 
 
+interface PlainMarker {
+  color: string;
+  lngLat: number [];
+}
+
+
 @Component({
   templateUrl: './markers-page.component.html',
   styleUrl: './markers-page.component.css'
@@ -16,9 +22,6 @@ export class MarkersPageComponent {
   @ViewChild('map') divMap?: ElementRef;
 
   public markers : MarkerAndColor []=[];
-
-
-
   public zoom: number = 15;
   public map?: Map;
   public currentLngLat: LngLat = new LngLat(-74.07107196315216, 4.71195735766851)
@@ -33,7 +36,7 @@ export class MarkersPageComponent {
       center: this.currentLngLat, // starting position [lng, lat]
       zoom: this.zoom, // starting zoom
     });
-
+    this.readFromLocalStorage();
     // const markerHTML = document.createElement('div');
     // markerHTML.innerHTML='Edgar Diaz'
 
@@ -71,6 +74,12 @@ export class MarkersPageComponent {
       .addTo(this.map);
 
       this.markers.push({color,marker});
+      this.saveToLocalStorage();
+
+      marker.on('dragend',() => this.saveToLocalStorage()
+        //{console.log(marker.getLngLat());}
+      );
+
   }
 
 
@@ -78,6 +87,7 @@ export class MarkersPageComponent {
 
     this.markers[index].marker.remove();
     this.markers.splice(index,1);
+    this.saveToLocalStorage();
   }
 
 
@@ -88,5 +98,35 @@ export class MarkersPageComponent {
       center: marker.getLngLat(),
     });
   }
+
+
+
+
+  saveToLocalStorage(){
+    const plainMarkers : PlainMarker[] = this.markers.map ( ({color,marker}) => {
+      return {
+        color,
+        lngLat: marker.getLngLat().toArray()
+      }
+    });
+
+    localStorage.setItem('plainMarkers',JSON.stringify(plainMarkers));
+
+  }
+
+
+  readFromLocalStorage(){
+    const plainMarkersString = localStorage.getItem('plainMarkers') ?? '[]';
+    const plainMarkers: PlainMarker[] = JSON.parse(plainMarkersString); //! OJO
+
+    plainMarkers.forEach(({color, lngLat}) => {
+      const [lng , lat ] = lngLat;
+      const coords = new LngLat (lng,lat);
+
+      this.addMarker(coords , color);
+    })
+
+  }
+
 
 }
